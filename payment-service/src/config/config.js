@@ -4,9 +4,9 @@ const dbSettings = {
   pass: process.env.DB_PASS || 'cristianPassword2017',
   repl: process.env.DB_REPLS || 'rs1',
   servers: (process.env.DB_SERVERS) ? process.env.DB_SERVERS.substr(1, process.env.DB_SERVERS.length - 2).split(' ') : [
-    '192.168.99.100:27017',
-    '192.168.99.101:27017',
-    '192.168.99.102:27017'
+    '172.17.0.3:27017',
+    '172.17.0.3:27017',
+    '172.17.0.3:27017'
   ],
   dbParameters: () => ({
     w: 'majority',
