@@ -1,12 +1,17 @@
 #!/bin/bash
 
 # default parameters
-DRIVER="virtualbox"
+DRIVER="google"
 MANAGERS=1
 WORKERS=2
 DISK_SIZE="20000"
 MEMORY="2048"
 DOCKER_VERSION="https://github.com/boot2docker/boot2docker/releases/download/v1.13.0/boot2docker.iso"
+GOOGLE_PROJECT_ID="cool-discipline-161613"
+GOOGLE_ZONE="us-central1-c"
+GOOGLE_MACHINE_TYPE="g1-small"
+GOOGLE_MACHINE_IMAGE="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts"
+GOOGLE_TAGS="http-server,https-server"
 ADDITIONAL_PARAMS=
 
 function usage {
@@ -62,6 +67,11 @@ if [ "$DRIVER" == "virtualbox" ]; then
   ADDITIONAL_PARAMS="--virtualbox-disk-size ${DISK_SIZE} --virtualbox-memory ${MEMORY} --virtualbox-boot2docker-url=${DOCKER_VERSION}"
 fi
 
+if [ "$DRIVER" == "google" ]; then
+  echo "-> about to create a swarm with $MANAGERS manager(s) and $WORKERS WORKERS on $DRIVER machines"
+  ADDITIONAL_PARAMS=" --google-project ${GOOGLE_PROJECT_ID} --google-zone ${GOOGLE_ZONE} --google-machine-image ${GOOGLE_MACHINE_IMAGE} --google-tags=${GOOGLE_TAGS} --google-machine-type ${GOOGLE_MACHINE_TYPE}"
+fi
+
 function getIP {
   echo $(docker-machine ip $1)
 }
@@ -92,6 +102,11 @@ function initSwarmManager {
   # initialize swarm mode and create a manager
   echo '============================================'
   echo "======> Initializing first swarm manager ..."
+  echo "======> Adding current user to docker group..."
+  docker-machine ssh manager1 sudo usermod -aG docker docker-user
+  echo "======> Removing existing swarm state, if any..."
+  docker-machine ssh manager1 docker swarm leave --force
+  echo "======> Adding first swarm manager..."
   docker-machine ssh manager1 docker swarm init --advertise-addr $(getIP manager1)
 }
 
@@ -99,6 +114,10 @@ function join_node_swarm {
   # WORKERS join swarm
   for node in $(seq 1 $WORKERS);
   do
+    echo "======> Adding current user to docker group..."
+    docker-machine ssh worker$node sudo usermod -aG docker docker-user
+    echo "======> Removing existing swarm state, if any..."
+    docker-machine ssh worker$node docker swarm leave --force
     echo "======> worker$node joining swarm as worker ..."
     docker-machine ssh worker$node docker swarm join --token $(get_worker_token) $(getIP manager1):2377
   done
